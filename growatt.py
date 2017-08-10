@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#
+# Read Growatt 1500 usage data and store in CSV file for further processing
+#
+# Rick van der Zwet <info@rickvanderzwet.nl>
+#
 import csv
 import os
 import serial
@@ -55,7 +60,7 @@ def receive_data(ser):
 			# Make mapping and translation easy
 			d = map(int, result)
 	
-			# Retrieve all values
+			# Retrieve all values stored in the byte-array
 			h = {}
 			h['pv1_voltage']       = float((d[ 1] << 8) + d[ 2]) / 10
 			#h['dont_care']         = float((d[ 3] << 8) + d[ 4]) / 10
@@ -88,8 +93,12 @@ def receive_data(ser):
 	
 	
 
+#
+# Main runner
 if __name__ == '__main__':
 	ser = serial.Serial('/dev/ttyUSB1', 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
 	while True:
+                # Initialize Growatt, asking it to sent usage data
 		request_start(ser)
+                # Start receiving usage data
 		receive_data(ser)
