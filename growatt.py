@@ -3,6 +3,7 @@ import csv
 import os
 import serial
 import time
+import sys
 
 
 def request_start(ser):
@@ -89,7 +90,7 @@ def receive_data(ser):
 	
 
 if __name__ == '__main__':
-	ser = serial.Serial('/dev/ttyUSB1', 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
+	ser = serial.Serial(sys.argv[1], 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
 	while True:
 		request_start(ser)
 		receive_data(ser)
