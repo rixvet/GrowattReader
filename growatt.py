@@ -9,6 +9,7 @@ import os
 import serial
 import sys
 import time
+import sys
 
 
 def request_start(ser):
@@ -149,7 +150,7 @@ if __name__ == '__main__':
             for i, csvfile in enumerate(sys.argv[2:]):
                 parse(csvfile, i == 0)
         else:
-	    ser = serial.Serial('/dev/ttyUSB1', 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
+	    ser = serial.Serial(sys.argv[1], 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
 	    while True:
                     # Initialize Growatt, asking it to sent usage data
 	    	request_start(ser)
