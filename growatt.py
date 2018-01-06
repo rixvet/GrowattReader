@@ -7,6 +7,7 @@
 import csv
 import os
 import serial
+import sys
 import time
 
 
@@ -89,16 +90,68 @@ def receive_data(ser):
 					writer.writeheader()
 	      			writer.writerow(h)
 			
-			
-	
+
+def parse(csvfile, header=False):
+    """ Output seems to have no CRC causing invalid entries to be logged"""
+
+    with open(csvfile, 'rb') as fh:
+        # Ensure \0 values (read errors) are filtered out before start
+        reader = csv.DictReader([row for row in fh if not '\0' in row], delimiter=';', lineterminator='\n')
+        if header:
+            # Only print header ones (during start)
+            print ';'.join(sorted(reader.fieldnames))
+    
+        prev_row = {'energy_today': 0, 'time' : 0}
+        for row in reader:
+            # Discard read errrors found using various outliar detections
+            if not row['inverter_status'] in ('0', '1'):
+                continue
+            if not row['inverter_fault'] in ('0', '1'):
+                continue
+            if float(row['temperature']) > 40 or float(row['temperature']) <= 10:
+                # Seems inverter temperature which is located inside
+                continue
+            if float(row['total_time_worked']) > (20 * 365 * 24 * 60):
+                # No panels older than 20 years continous operations
+                continue
+            if float(row['total_time_worked']) == 0:
+                # No panels with zero seconds on the clock
+                continue
+            if float(row['output_power']) > 2000:
+                # Have 6 * 280Wp maximum available
+                continue
+            if float(row['energy_total']) > 20 * (6 * 280):
+                # We could never produce more than our maximum capacity
+                continue
+            if float(row['pv2_voltage']) > 500:
+                # Maximum PV voltage cannot be exceded
+                continue
+            if (float(row['time']) - float(prev_row['time'])) < 100:
+                if (float(row['energy_today']) - float(prev_row['energy_today'])) > 1.0:
+                # Check only allowed on small time delta's
+                    # No large delta posible in production as intervals are short
+                    continue
+            if float(row['grid_freq']) > 100 or float(row['grid_voltage']) > 500:
+                # Let's seriously hope there are measurement errors, else I
+                # have to have a strong chat with my elektricitiy distributor
+                continue
+
+            print ';'.join([row[x] for x in sorted(reader.fieldnames)])
+            prev_row = row
+            
+    
 	
 
 #
 # Main runner
 if __name__ == '__main__':
-	ser = serial.Serial('/dev/ttyUSB1', 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
-	while True:
-                # Initialize Growatt, asking it to sent usage data
-		request_start(ser)
-                # Start receiving usage data
-		receive_data(ser)
+        if sys.argv[1] == 'parse':
+            for i, csvfile in enumerate(sys.argv[2:]):
+                parse(csvfile, i == 0)
+        else:
+	    ser = serial.Serial('/dev/ttyUSB1', 9600, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=5)
+	    while True:
+                    # Initialize Growatt, asking it to sent usage data
+	    	request_start(ser)
+                    # Start receiving usage data
+	    	receive_data(ser)
